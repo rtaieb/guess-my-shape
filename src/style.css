@@ -266,6 +266,12 @@ canvas {
 .share-box b { font-size: 1.1rem; color: #2c3e50; letter-spacing: 1px; }
 .share-box button { padding: 0.3rem 0.6rem; font-size: 0.8rem; margin: 0; }
 
+.mobile-only { display: none !important; }
+@media (max-width: 768px) {
+  .desktop-only { display: none !important; }
+  .mobile-only { display: inline-block !important; }
+}
+
 /* READY PANEL */
 .ready-panel { margin-top: 1rem; text-align: center; }
 .ready-panel button { width: 100%; margin-bottom: 0.5rem; }

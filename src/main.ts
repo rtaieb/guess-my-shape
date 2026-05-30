@@ -33,7 +33,7 @@ const renderLobbyJoin = () => `
     </div>
     <div class="form-group">
       <label>Code du salon :</label>
-      <input type="text" id="roomCodeInput" value="${initialRoomCode}" placeholder="Laisser vide pour créer" />
+      <input type="text" id="roomCodeInput" value="${initialRoomCode}" maxlength="7" style="text-transform: uppercase;" placeholder="Laisser vide pour créer" />
     </div>
     <button id="btnJoinCreate">Créer / Rejoindre</button>
   </div>
@@ -48,8 +48,9 @@ const renderLobbyRoom = (room: Room) => {
       <div class="share-box">
         <button id="btnHome" style="margin-right: auto;" title="Quitter le salon">🏠</button>
         <span>Code: <b>${currentRoomId}</b></span>
-        <button id="btnCopyCode" class="btn-large">📋 Code</button>
-        <button id="btnCopyUrl" class="btn-large">📋 Lien</button>
+        <button id="btnCopyCode" class="btn-large desktop-only">📋 Code</button>
+        <button id="btnCopyUrl" class="btn-large desktop-only">📋 Lien</button>
+        <button id="btnShareMobile" class="btn-large mobile-only" title="Partager">📤 Partager</button>
       </div>
       <div class="players-list">
         <h3>Joueurs (${Object.keys(room.players).length})</h3>
@@ -104,8 +105,9 @@ const renderGame = (room: Room) => {
       <div class="share-box" style="margin-bottom: 0.5rem">
         <button id="btnHome" style="margin-right: auto;" title="Quitter le salon">🏠</button>
         <span>Code: <b>${currentRoomId}</b></span>
-        <button id="btnCopyCode" class="btn-large">📋 Code</button>
-        <button id="btnCopyUrl" class="btn-large">📋 Lien</button>
+        <button id="btnCopyCode" class="btn-large desktop-only">📋 Code</button>
+        <button id="btnCopyUrl" class="btn-large desktop-only">📋 Lien</button>
+        <button id="btnShareMobile" class="btn-large mobile-only" title="Partager">📤 Partager</button>
       </div>
       <div class="game-header">
         <div id="wordDisplay">Mot: ${wordDisplay}</div>
@@ -179,6 +181,23 @@ function setupCopyButtons() {
       updateView();
     }
   });
+  document.getElementById('btnShareMobile')?.addEventListener('click', async () => {
+    const url = window.location.origin + window.location.pathname + '?room=' + currentRoomId;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Guess My Shape',
+          text: `Rejoins mon salon Guess My Shape ! Code: ${currentRoomId}`,
+          url: url
+        });
+      } catch (err) {
+        console.error("Partage annulé ou échoué", err);
+      }
+    } else {
+      navigator.clipboard.writeText(url);
+      showToast("Lien copié !");
+    }
+  });
 }
 
 function updateView() {
@@ -205,6 +224,10 @@ function updateView() {
       const input = document.getElementById('playerNameInput') as HTMLInputElement;
       input.value = '';
       input.focus();
+    });
+    document.getElementById('roomCodeInput')?.addEventListener('input', (e) => {
+      const target = e.target as HTMLInputElement;
+      target.value = target.value.toUpperCase();
     });
   } else if (currentRoom.state === 'lobby') {
     appDiv.innerHTML = renderLobbyRoom(currentRoom);
