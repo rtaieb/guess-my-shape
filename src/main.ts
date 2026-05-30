@@ -13,6 +13,8 @@ let currentRoomId: string | null = null;
 let currentRoom: Room | null = null;
 let localReturnedToLobby = false;
 
+
+
 // URL parameters
 const urlParams = new URLSearchParams(window.location.search);
 const initialRoomCode = urlParams.get('room') || '';
@@ -39,6 +41,8 @@ const renderLobbyJoin = () => `
     <button id="btnJoinCreate">Créer / Rejoindre</button>
   </div>
 `;
+
+
 
 const renderLobbyRoom = (room: Room) => {
   const playersHtml = Object.entries(room.players).map(([id, p]) => `<li>${p.name} ${id === myId ? '(moi)' : ''} ${p.isHost ? '(Host)' : ''}</li>`).join('');
@@ -375,6 +379,8 @@ function updateView() {
   }
 }
 
+
+
 async function handleJoinCreate() {
   const nameInput = (document.getElementById('playerNameInput') as HTMLInputElement).value.trim();
   const roomInput = (document.getElementById('roomCodeInput') as HTMLInputElement).value.trim().toUpperCase();
@@ -414,7 +420,6 @@ async function handleJoinCreate() {
   // Setup disconnect
   onDisconnect(ref(db, `rooms/${currentRoomId}/players/${myId}`)).remove();
   
-  // Listen
   onValue(roomRef, (snap) => {
     if (snap.exists()) {
       const oldState = currentRoom?.state;
@@ -423,6 +428,30 @@ async function handleJoinCreate() {
         currentRoom = null;
         currentRoomId = null;
       }
+
+      // Track word stats if round ended
+      if (currentRoom && (currentRoom.state === 'roundEnd' || currentRoom.state === 'matchEnd')) {
+        if (currentRoom.players[myId]?.isHost && currentRoom.currentRound && !currentRoom.currentRound.statsRecorded) {
+          const roundRef = ref(db, `rooms/${currentRoomId}/currentRound`);
+          update(roundRef, { statsRecorded: true });
+
+          const word = currentRoom.currentRound.word;
+          const wordKey = encodeURIComponent(word).replace(/\./g, '%2E');
+          const hasGuesses = currentRoom.currentRound.correctGuessers && currentRoom.currentRound.correctGuessers.length > 0;
+          
+          const statRef = ref(db, `wordStats/${wordKey}`);
+          get(statRef).then((sSnap) => {
+            const currentStats = sSnap.val() || { word, guessedCount: 0, failedCount: 0 };
+            if (hasGuesses) {
+              currentStats.guessedCount = (currentStats.guessedCount || 0) + 1;
+            } else {
+              currentStats.failedCount = (currentStats.failedCount || 0) + 1;
+            }
+            set(statRef, currentStats);
+          });
+        }
+      }
+
       if (currentRoom && !currentRoom.settings) {
         currentRoom.settings = { maxStrokes: 15, maxTime: 45, matchTurns: 3 };
       } else if (currentRoom && !currentRoom.settings.matchTurns) {
@@ -432,6 +461,7 @@ async function handleJoinCreate() {
         strokesCount = 0;
         localReturnedToLobby = false;
       }
+
       
       // Auto-start if everyone is ready
       if (currentRoom?.state === 'roundEnd' && currentRoom.players[myId]?.isHost) {

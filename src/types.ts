@@ -40,6 +40,13 @@ export type Round = {
   correctGuessers: string[];
   strokes?: Record<string, Stroke>;
   chat?: Record<string, ChatMessage>;
+  statsRecorded?: boolean;
+};
+
+export type WordStats = {
+  word: string;
+  guessedCount: number;
+  failedCount: number;
 };
 
 export type Room = {
@@ -50,3 +57,4 @@ export type Room = {
   readyPlayers?: string[];
   roundEndTime?: number;
 };
+
