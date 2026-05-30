@@ -518,8 +518,8 @@ function setupChat() {
   const send = () => {
     const text = input.value.trim();
     if (text) {
-      handleGuess(text);
       input.value = '';
+      handleGuess(text);
     }
   };
   btn.onclick = send;
