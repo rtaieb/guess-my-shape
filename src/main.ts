@@ -2,13 +2,13 @@ import './style.css';
 import { db } from './firebase';
 import { ref, set, get, onValue, push, update, remove, onDisconnect } from 'firebase/database';
 import type { Room, Stroke } from './types';
-import { generateId, isGuessCorrect } from './utils';
+import { generateId, isGuessCorrect, getRandomPseudo } from './utils';
 import { getRandomWord } from './words';
 
 // State
 let myId = localStorage.getItem('playerId') || generateId();
 localStorage.setItem('playerId', myId);
-let myName = localStorage.getItem('playerName') || '';
+let myName = localStorage.getItem('playerName'); // Intentionally undefined if none
 let currentRoomId: string | null = null;
 let currentRoom: Room | null = null;
 
@@ -25,7 +25,11 @@ const renderLobbyJoin = () => `
     <h1 class="title">Guess My Shape</h1>
     <div class="form-group">
       <label>Ton pseudo :</label>
-      <input type="text" id="playerNameInput" value="${myName}" placeholder="Ex: Pikachou" />
+      <div class="input-with-buttons">
+        <input type="text" id="playerNameInput" value="${myName || getRandomPseudo()}" placeholder="Ex: Pikachou" />
+        <button id="btnRandomPseudo" title="Changer aléatoirement">🎲</button>
+        <button id="btnClearPseudo" title="Effacer">❌</button>
+      </div>
     </div>
     <div class="form-group">
       <label>Code du salon :</label>
@@ -163,6 +167,15 @@ function updateView() {
   if (!currentRoom) {
     appDiv.innerHTML = renderLobbyJoin();
     document.getElementById('btnJoinCreate')!.onclick = handleJoinCreate;
+    
+    document.getElementById('btnRandomPseudo')?.addEventListener('click', () => {
+      (document.getElementById('playerNameInput') as HTMLInputElement).value = getRandomPseudo();
+    });
+    document.getElementById('btnClearPseudo')?.addEventListener('click', () => {
+      const input = document.getElementById('playerNameInput') as HTMLInputElement;
+      input.value = '';
+      input.focus();
+    });
   } else if (currentRoom.state === 'lobby') {
     appDiv.innerHTML = renderLobbyRoom(currentRoom);
     setupCopyButtons();
