@@ -40,24 +40,30 @@ const renderLobbyJoin = () => `
 `;
 
 const renderLobbyRoom = (room: Room) => {
-  const playersHtml = Object.values(room.players).map(p => `<li>${p.name} ${p.isHost ? '(Host)' : ''}</li>`).join('');
+  const playersHtml = Object.entries(room.players).map(([id, p]) => `<li>${p.name} ${id === myId ? '(moi)' : ''} ${p.isHost ? '(Host)' : ''}</li>`).join('');
   const isHost = room.players[myId]?.isHost;
   return `
     <div class="screen lobby-container">
       <h2 class="title">Salon</h2>
       <div class="share-box">
+        <button id="btnHome" class="btn-icon" title="Quitter le salon">🏠</button>
         <span>Code: <b>${currentRoomId}</b></span>
-        <button id="btnCopyCode">📋 Code</button>
-        <button id="btnCopyUrl">📋 Lien</button>
+        <button id="btnCopyCode" class="btn-large">📋 Code</button>
+        <button id="btnCopyUrl" class="btn-large">📋 Lien</button>
       </div>
       <div class="players-list">
         <h3>Joueurs (${Object.keys(room.players).length})</h3>
         <ul>${playersHtml}</ul>
       </div>
       ${isHost ? `
+        <div class="difficulty-presets">
+          <button id="btnDiffFacile" class="btn-small">Facile</button>
+          <button id="btnDiffClassique" class="btn-small">Classique</button>
+          <button id="btnDiffDifficile" class="btn-small">Difficile</button>
+        </div>
         <div class="form-group">
           <label>Traits max :</label>
-          <input type="number" id="settingStrokes" value="${room.settings.maxStrokes}" min="5" max="20" />
+          <input type="number" id="settingStrokes" value="${room.settings.maxStrokes}" min="2" max="20" />
         </div>
         <div class="form-group">
           <label>Temps (sec) :</label>
@@ -74,10 +80,12 @@ const renderLobbyRoom = (room: Room) => {
 const renderGame = (room: Room) => {
   const players = Object.values(room.players).sort((a, b) => b.score - a.score);
   const playersHtml = players.map(p => {
+    const pId = Object.keys(room.players).find(k => room.players[k].name === p.name);
+    const isMe = pId === myId;
     const isDrawer = p.name === room.players[room.currentRound!.drawerId].name;
     return `
       <li class="${isDrawer ? 'drawer-highlight' : ''}">
-        ${p.name} ${isDrawer ? '✏️' : ''} : ${p.score} pts
+        ${p.name} ${isMe ? '(moi)' : ''} ${isDrawer ? '✏️' : ''} : ${p.score} pts
       </li>
     `;
   }).join('');
@@ -94,9 +102,10 @@ const renderGame = (room: Room) => {
   return `
     <div class="screen" style="max-width: 1000px">
       <div class="share-box" style="margin-bottom: 0.5rem">
+        <button id="btnHome" class="btn-icon" title="Quitter le salon">🏠</button>
         <span>Code: <b>${currentRoomId}</b></span>
-        <button id="btnCopyCode">📋 Code</button>
-        <button id="btnCopyUrl">📋 Lien</button>
+        <button id="btnCopyCode" class="btn-large">📋 Code</button>
+        <button id="btnCopyUrl" class="btn-large">📋 Lien</button>
       </div>
       <div class="game-header">
         <div id="wordDisplay">Mot: ${wordDisplay}</div>
@@ -161,6 +170,15 @@ function setupCopyButtons() {
     navigator.clipboard.writeText(url);
     showToast("Lien copié !");
   });
+  document.getElementById('btnHome')?.addEventListener('click', async () => {
+    if (currentRoomId) {
+      await remove(ref(db, `rooms/${currentRoomId}/players/${myId}`));
+      currentRoomId = null;
+      currentRoom = null;
+      window.history.pushState({}, '', window.location.pathname);
+      updateView();
+    }
+  });
 }
 
 function updateView() {
@@ -181,11 +199,26 @@ function updateView() {
     setupCopyButtons();
     if (currentRoom.players[myId]?.isHost) {
       document.getElementById('btnStartGame')!.onclick = handleStartGame;
+      
+      document.getElementById('btnDiffFacile')?.addEventListener('click', () => {
+        update(ref(db, `rooms/${currentRoomId}/settings`), { maxStrokes: 20, maxTime: 60 });
+      });
+      document.getElementById('btnDiffClassique')?.addEventListener('click', () => {
+        update(ref(db, `rooms/${currentRoomId}/settings`), { maxStrokes: 15, maxTime: 45 });
+      });
+      document.getElementById('btnDiffDifficile')?.addEventListener('click', () => {
+        update(ref(db, `rooms/${currentRoomId}/settings`), { maxStrokes: 7, maxTime: 30 });
+      });
+
       document.getElementById('settingStrokes')!.onchange = (e) => {
-        update(ref(db, `rooms/${currentRoomId}/settings`), { maxStrokes: +(e.target as HTMLInputElement).value });
+        let val = +(e.target as HTMLInputElement).value;
+        if (val < 2) val = 2;
+        update(ref(db, `rooms/${currentRoomId}/settings`), { maxStrokes: val });
       };
       document.getElementById('settingTime')!.onchange = (e) => {
-        update(ref(db, `rooms/${currentRoomId}/settings`), { maxTime: +(e.target as HTMLInputElement).value });
+        let val = +(e.target as HTMLInputElement).value;
+        if (val < 10) val = 10;
+        update(ref(db, `rooms/${currentRoomId}/settings`), { maxTime: val });
       };
     }
   } else {

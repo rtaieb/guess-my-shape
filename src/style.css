@@ -291,3 +291,35 @@ canvas {
   align-items: center;
   justify-content: center;
 }
+
+/* NEW STYLES */
+.btn-large {
+  font-size: 1.2rem !important;
+  padding: 0.5rem 1rem !important;
+}
+.btn-icon {
+  background-color: #34495e !important;
+  border-color: #2c3e50 !important;
+}
+.btn-small {
+  font-size: 0.9rem;
+  padding: 0.3rem 0.5rem;
+}
+.difficulty-presets {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+}
+#btnDiffFacile { background-color: #2ecc71 !important; border-color: #27ae60 !important; }
+#btnDiffClassique { background-color: #f39c12 !important; border-color: #d35400 !important; }
+#btnDiffDifficile { background-color: #e74c3c !important; border-color: #c0392b !important; }
+
+#btnClearPseudo {
+  background-color: #34495e !important;
+  border-color: #2c3e50 !important;
+}
+#btnRandomPseudo {
+  background-color: #3498db !important;
+  border-color: #2980b9 !important;
+}
