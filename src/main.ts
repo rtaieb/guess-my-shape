@@ -179,8 +179,12 @@ function setupCopyButtons() {
     showToast("Lien copié !");
   });
   document.getElementById('btnHome')?.addEventListener('click', async () => {
-    if (currentRoomId) {
-      await remove(ref(db, `rooms/${currentRoomId}/players/${myId}`));
+    if (currentRoomId && currentRoom) {
+      if (Object.keys(currentRoom.players).length <= 1) {
+        await remove(ref(db, `rooms/${currentRoomId}`));
+      } else {
+        await remove(ref(db, `rooms/${currentRoomId}/players/${myId}`));
+      }
       currentRoomId = null;
       currentRoom = null;
       window.history.pushState({}, '', window.location.pathname);
@@ -616,3 +620,19 @@ function renderChat() {
 }
 
 updateView();
+
+// Garbage collection of empty rooms on startup
+get(ref(db, 'rooms')).then(snap => {
+  if (snap.exists()) {
+    const rooms = snap.val();
+    const updates: any = {};
+    for (const [rId, r] of Object.entries(rooms) as [string, any][]) {
+      if (!r.players || Object.keys(r.players).length === 0) {
+        updates[`rooms/${rId}`] = null;
+      }
+    }
+    if (Object.keys(updates).length > 0) {
+      update(ref(db), updates);
+    }
+  }
+});
