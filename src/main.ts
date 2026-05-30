@@ -343,6 +343,9 @@ async function handleJoinCreate() {
         currentRoom = null;
         currentRoomId = null;
       }
+      if (currentRoom && !currentRoom.settings) {
+        currentRoom.settings = { maxStrokes: 15, maxTime: 45 };
+      }
       if (oldState !== 'playing' && currentRoom?.state === 'playing') {
         strokesCount = 0;
       }
