@@ -1,7 +1,7 @@
 import './style.css';
 import { db } from './firebase';
 import { ref, set, get, onValue, push, update, remove, onDisconnect } from 'firebase/database';
-import type { Room, Player, RoomState, Stroke, ChatMessage } from './types';
+import type { Room, Stroke } from './types';
 import { generateId, isGuessCorrect } from './utils';
 import { getRandomWord } from './words';
 
@@ -193,12 +193,12 @@ function updateView() {
     }
     
     // Timers
-    if (window['timerInt']) clearInterval(window['timerInt']);
+    if ((window as any).timerInt) clearInterval((window as any).timerInt);
     if (currentRoom.state === 'playing') {
-      window['timerInt'] = setInterval(updateTimer, 1000);
+      (window as any).timerInt = setInterval(updateTimer, 1000);
       updateTimer();
     } else if (currentRoom.state === 'roundEnd') {
-      window['timerInt'] = setInterval(updateReadyTimer, 1000);
+      (window as any).timerInt = setInterval(updateReadyTimer, 1000);
       updateReadyTimer();
     }
   }
