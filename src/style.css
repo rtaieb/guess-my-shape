@@ -295,7 +295,10 @@ canvas {
 /* NEW STYLES */
 .btn-large {
   font-size: 1.2rem !important;
-  padding: 0.5rem 1rem !important;
+  padding: 0.2rem 0.5rem !important;
+}
+#btnHome {
+  font-size: 1.8rem !important;
 }
 .btn-small {
   font-size: 0.9rem;

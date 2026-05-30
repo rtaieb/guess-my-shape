@@ -182,6 +182,18 @@ function setupCopyButtons() {
 }
 
 function updateView() {
+  let activeElementId = document.activeElement?.id;
+  let chatInputValue = '';
+  let chatInputSelectionStart: number | null = null;
+  let chatInputSelectionEnd: number | null = null;
+
+  if (activeElementId === 'chatInput') {
+    const input = document.activeElement as HTMLInputElement;
+    chatInputValue = input.value;
+    chatInputSelectionStart = input.selectionStart;
+    chatInputSelectionEnd = input.selectionEnd;
+  }
+
   if (!currentRoom) {
     appDiv.innerHTML = renderLobbyJoin();
     document.getElementById('btnJoinCreate')!.onclick = handleJoinCreate;
@@ -246,6 +258,17 @@ function updateView() {
     } else if (currentRoom.state === 'roundEnd') {
       (window as any).timerInt = setInterval(updateReadyTimer, 1000);
       updateReadyTimer();
+    }
+  }
+
+  if (activeElementId === 'chatInput') {
+    const input = document.getElementById('chatInput') as HTMLInputElement;
+    if (input && !input.disabled) {
+      input.focus();
+      input.value = chatInputValue;
+      if (chatInputSelectionStart !== null) {
+        input.setSelectionRange(chatInputSelectionStart, chatInputSelectionEnd);
+      }
     }
   }
 }
