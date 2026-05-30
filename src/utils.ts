@@ -1,3 +1,5 @@
+import { PSEUDOS } from './pseudos';
+
 // Calculate Levenshtein distance between two strings
 export function levenshteinDistance(a: string, b: string): number {
   const matrix = [];
@@ -52,7 +54,6 @@ export function generateId(): string {
   return Math.random().toString(36).substring(2, 9);
 }
 
-const OLD_NAMES = ["Gédéon", "Marcel", "Josiane", "Raymonde", "Léonce", "Yvette", "Gaston", "Hortense", "Fernand", "Odette", "Alphonse", "Lucienne", "Eustache", "Berthe", "Hippolyte", "Marguerite", "Aristide", "Ginette", "Philémon", "Paulette", "Félicien", "Francine"];
 export function getRandomPseudo(): string {
-  return OLD_NAMES[Math.floor(Math.random() * OLD_NAMES.length)];
+  return PSEUDOS[Math.floor(Math.random() * PSEUDOS.length)];
 }
