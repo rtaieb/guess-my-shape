@@ -4,6 +4,7 @@ import { ref, set, get, onValue, push, update, remove, onDisconnect } from 'fire
 import type { Room, Stroke } from './types';
 import { generateId, isGuessCorrect, getRandomPseudo } from './utils';
 import { getRandomWord } from './words';
+import html2canvas from 'html2canvas';
 
 // State
 let myId = localStorage.getItem('playerId') || generateId();
@@ -145,7 +146,8 @@ const renderGame = (room: Room) => {
   const isReady = room.readyPlayers?.includes(myId);
 
   return `
-    <div class="screen" style="max-width: 1000px; position: relative;">
+    <div class="screen" id="exportContainer" style="max-width: 1000px; position: relative;">
+      <h1 id="exportTitle" class="title" style="display: none; text-align: center; margin-top: 1rem;">Guess My Shape</h1>
       ${isMatchEnd ? renderPodium(room) : ''}
       <div class="share-box" style="margin-bottom: 0.5rem">
         <button id="btnHome" title="Quitter le salon">
@@ -170,7 +172,12 @@ const renderGame = (room: Room) => {
         <div id="strokesDisplay">Traits: 0 / ${room.settings.maxStrokes}</div>
       </div>
       <div class="game-container">
-        <div>
+        <div style="position: relative;">
+          ${room.state === 'roundEnd' ? `
+            <button id="btnSaveDrawing" title="Sauvegarder l'image" style="position: absolute; top: 10px; right: 10px; font-size: 1.5rem; background-color: #e74c3c; border: 2px solid #c0392b; border-bottom-width: 4px; border-radius: 5px; cursor: pointer; padding: 5px; z-index: 10; color: white;">
+              💾
+            </button>
+          ` : ''}
           <canvas id="gameCanvas" width="800" height="600"></canvas>
           ${room.state === 'roundEnd' ? `
             <div class="ready-panel">
@@ -341,6 +348,43 @@ function updateView() {
         if (!readyPlayers.includes(myId)) {
           const newReady = [...readyPlayers, myId];
           await set(ref(db, `rooms/${currentRoomId}/readyPlayers`), newReady);
+        }
+      });
+      
+      document.getElementById('btnSaveDrawing')?.addEventListener('click', async () => {
+        const container = document.getElementById('exportContainer');
+        const exportTitle = document.getElementById('exportTitle');
+        if (!container) return;
+        
+        const elementsToHide = container.querySelectorAll('.share-box, .btn-return-lobby, .players-list, .ready-panel, #btnSaveDrawing, .podium-overlay') as NodeListOf<HTMLElement>;
+        const oldDisplays: string[] = [];
+        elementsToHide.forEach((el) => {
+          oldDisplays.push(el.style.display);
+          el.style.display = 'none';
+        });
+        
+        if (exportTitle) exportTitle.style.display = 'block';
+        const oldPadding = container.style.padding;
+        container.style.padding = '20px';
+        
+        try {
+          const canvasResult = await html2canvas(container, {
+            backgroundColor: '#fdf6e3',
+          });
+          const link = document.createElement('a');
+          const word = currentRoom?.currentRound?.word || 'dessin';
+          link.download = `guess-my-shape-${word.replace(/ /g, '_')}.jpg`;
+          link.href = canvasResult.toDataURL('image/jpeg', 0.85);
+          link.click();
+        } catch (err) {
+          console.error(err);
+          showToast('Erreur lors de la sauvegarde');
+        } finally {
+          elementsToHide.forEach((el, idx) => {
+            el.style.display = oldDisplays[idx];
+          });
+          if (exportTitle) exportTitle.style.display = 'none';
+          container.style.padding = oldPadding;
         }
       });
     } else if (currentRoom.state === 'matchEnd') {
