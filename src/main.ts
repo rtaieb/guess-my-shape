@@ -68,18 +68,20 @@ const renderLobbyRoom = (room: Room) => {
           <button id="btnDiffClassique" class="btn-small">Classique</button>
           <button id="btnDiffDifficile" class="btn-small">Difficile</button>
         </div>
-        <div class="form-group">
-          <label>Tours par joueur :</label>
-          <input type="number" id="settingMatchTurns" value="${room.settings.matchTurns || 3}" min="1" max="10" />
-        </div>
-        <div class="form-group">
-          <label>Traits max :</label>
-          <input type="number" id="settingStrokes" value="${room.settings.maxStrokes}" min="2" max="20" />
-        </div>
-        <div class="form-group">
-          <label>Temps (sec) :</label>
-          <input type="number" id="settingTime" value="${room.settings.maxTime}" min="10" max="120" />
-        </div>
+      ` : ''}
+      <div class="form-group">
+        <label>Tours par joueur :</label>
+        <input type="number" id="settingMatchTurns" value="${room.settings.matchTurns || 3}" min="1" max="10" ${!isHost ? 'disabled' : ''} />
+      </div>
+      <div class="form-group">
+        <label>Traits max :</label>
+        <input type="number" id="settingStrokes" value="${room.settings.maxStrokes}" min="2" max="20" ${!isHost ? 'disabled' : ''} />
+      </div>
+      <div class="form-group">
+        <label>Temps (sec) :</label>
+        <input type="number" id="settingTime" value="${room.settings.maxTime}" min="10" max="120" ${!isHost ? 'disabled' : ''} />
+      </div>
+      ${isHost ? `
         <button id="btnStartGame">Lancer la partie</button>
       ` : `
         <p>En attente du créateur pour lancer la partie...</p>
