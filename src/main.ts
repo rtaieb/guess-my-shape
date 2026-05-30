@@ -68,6 +68,10 @@ const renderLobbyRoom = (room: Room) => {
           <button id="btnDiffDifficile" class="btn-small">Difficile</button>
         </div>
         <div class="form-group">
+          <label>Tours par joueur :</label>
+          <input type="number" id="settingMatchTurns" value="${room.settings.matchTurns || 3}" min="1" max="10" />
+        </div>
+        <div class="form-group">
           <label>Traits max :</label>
           <input type="number" id="settingStrokes" value="${room.settings.maxStrokes}" min="2" max="20" />
         </div>
@@ -83,12 +87,41 @@ const renderLobbyRoom = (room: Room) => {
   `;
 };
 
+const renderPodium = (room: Room) => {
+  const sortedPlayers = Object.values(room.players).sort((a, b) => b.score - a.score);
+  const medals = ['🥇', '🥈', '🥉'];
+  const isHost = room.players[myId]?.isHost;
+  
+  return `
+    <div class="podium-overlay">
+      <div class="podium-modal">
+        <h2>Fin de la Manche !</h2>
+        <div class="podium-list">
+          ${sortedPlayers.slice(0, 3).map((p, i) => `
+            <div class="podium-item rank-${i+1}">
+              <span class="medal">${medals[i] || '🎖️'}</span>
+              <span class="name">${p.name}</span>
+              <span class="score">${p.score} pts</span>
+            </div>
+          `).join('')}
+        </div>
+        ${isHost ? `
+          <button id="btnNewMatch" class="btn-large" style="margin-top: 1rem; width: 100%;">Nouvelle Manche</button>
+        ` : `
+          <p style="margin-top: 1rem; text-align: center;">En attente de l'hôte pour relancer...</p>
+        `}
+      </div>
+    </div>
+  `;
+};
+
 const renderGame = (room: Room) => {
+  const isMatchEnd = room.state === 'matchEnd';
   const players = Object.values(room.players).sort((a, b) => b.score - a.score);
   const playersHtml = players.map(p => {
     const pId = Object.keys(room.players).find(k => room.players[k].name === p.name);
     const isMe = pId === myId;
-    const isDrawer = p.name === room.players[room.currentRound!.drawerId].name;
+    const isDrawer = !isMatchEnd && room.currentRound && p.name === room.players[room.currentRound.drawerId]?.name;
     return `
       <li class="${isDrawer ? 'drawer-highlight' : ''}">
         ${p.name} ${isMe ? '(moi)' : ''} ${isDrawer ? '✏️' : ''} : ${p.score} pts
@@ -96,10 +129,11 @@ const renderGame = (room: Room) => {
     `;
   }).join('');
   
-  const amIDrawer = room.currentRound!.drawerId === myId;
-  const wordDisplay = amIDrawer || room.state === 'roundEnd' 
-    ? room.currentRound!.word 
-    : room.currentRound!.word.replace(/[a-zA-ZÀ-ÿ]/g, '_ ');
+  const amIDrawer = !isMatchEnd && room.currentRound && room.currentRound.drawerId === myId;
+  const wordDisplay = isMatchEnd || !room.currentRound ? '---' : 
+    (amIDrawer || room.state === 'roundEnd' 
+      ? room.currentRound.word 
+      : room.currentRound.word.replace(/[a-zA-ZÀ-ÿ]/g, '_ '));
 
   const totalPlayers = Object.keys(room.players).length;
   const readyCount = room.readyPlayers ? room.readyPlayers.length : 0;
@@ -107,6 +141,7 @@ const renderGame = (room: Room) => {
 
   return `
     <div class="screen" style="max-width: 1000px">
+      ${isMatchEnd ? renderPodium(room) : ''}
       <div class="share-box" style="margin-bottom: 0.5rem">
         <button id="btnHome" title="Quitter le salon">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="4" stroke-linecap="round"><path d="M6 6 L18 18 M18 6 L6 18" /></svg>
@@ -142,8 +177,8 @@ const renderGame = (room: Room) => {
           <div class="chat-container">
             <div class="chat-messages" id="chatMessages"></div>
             <div class="chat-input">
-              <input type="text" id="chatInput" placeholder="Devine le mot..." ${amIDrawer || room.state === 'roundEnd' ? 'disabled' : ''} />
-              <button id="btnSendChat" ${amIDrawer || room.state === 'roundEnd' ? 'disabled' : ''}>Envoyer</button>
+              <input type="text" id="chatInput" placeholder="Devine le mot..." ${amIDrawer || room.state === 'roundEnd' || isMatchEnd ? 'disabled' : ''} />
+              <button id="btnSendChat" ${amIDrawer || room.state === 'roundEnd' || isMatchEnd ? 'disabled' : ''}>Envoyer</button>
             </div>
           </div>
         </div>
@@ -259,6 +294,12 @@ function updateView() {
         update(ref(db, `rooms/${currentRoomId}/settings`), { maxStrokes: 7, maxTime: 30 });
       });
 
+      document.getElementById('settingMatchTurns')!.onchange = (e) => {
+        let val = +(e.target as HTMLInputElement).value;
+        if (val < 1) val = 1;
+        update(ref(db, `rooms/${currentRoomId}/settings`), { matchTurns: val });
+      };
+
       document.getElementById('settingStrokes')!.onchange = (e) => {
         let val = +(e.target as HTMLInputElement).value;
         if (val < 2) val = 2;
@@ -278,15 +319,26 @@ function updateView() {
     setupChat();
     
     if (currentRoom.state === 'roundEnd') {
-      document.getElementById('btnNextRound')!.onclick = async () => {
+      document.getElementById('btnNextRound')?.addEventListener('click', async () => {
         const readyPlayers = currentRoom!.readyPlayers || [];
         if (!readyPlayers.includes(myId)) {
           const newReady = [...readyPlayers, myId];
           await set(ref(db, `rooms/${currentRoomId}/readyPlayers`), newReady);
         }
-      };
+      });
+    } else if (currentRoom.state === 'matchEnd') {
+      document.getElementById('btnNewMatch')?.addEventListener('click', async () => {
+        const updates: any = {};
+        updates[`rooms/${currentRoomId}/state`] = 'lobby';
+        updates[`rooms/${currentRoomId}/readyPlayers`] = null;
+        for (const [id, _] of Object.entries(currentRoom!.players)) {
+          updates[`rooms/${currentRoomId}/players/${id}/score`] = 0;
+          updates[`rooms/${currentRoomId}/players/${id}/turnsLeft`] = null;
+        }
+        await update(ref(db), updates);
+      });
     }
-    
+
     // Timers
     if ((window as any).timerInt) clearInterval((window as any).timerInt);
     if (currentRoom.state === 'playing') {
@@ -325,12 +377,19 @@ async function handleJoinCreate() {
     if (!roomSnap.exists()) {
       await set(roomRef, {
         state: 'lobby',
-        settings: { maxStrokes: 15, maxTime: 45 },
+        settings: { maxStrokes: 15, maxTime: 45, matchTurns: 3 },
         players: { [myId]: { name: myName, score: 0, isHost: true } }
       });
     } else {
+      const existingRoom = roomSnap.val() as Room;
+      let turnsLeft = 3;
+      if (existingRoom.state === 'playing' || existingRoom.state === 'roundEnd') {
+        const remaining = Object.values(existingRoom.players || {}).map(p => p.turnsLeft || 0);
+        turnsLeft = remaining.length ? Math.max(...remaining) : 3;
+      }
+      
       await update(ref(db, `rooms/${currentRoomId}/players/${myId}`), {
-        name: myName, score: 0, isHost: false
+        name: myName, score: 0, isHost: false, turnsLeft
       });
     }
   } catch (error: any) {
@@ -352,7 +411,9 @@ async function handleJoinCreate() {
         currentRoomId = null;
       }
       if (currentRoom && !currentRoom.settings) {
-        currentRoom.settings = { maxStrokes: 15, maxTime: 45 };
+        currentRoom.settings = { maxStrokes: 15, maxTime: 45, matchTurns: 3 };
+      } else if (currentRoom && !currentRoom.settings.matchTurns) {
+        currentRoom.settings.matchTurns = 3;
       }
       if (oldState !== 'playing' && currentRoom?.state === 'playing') {
         strokesCount = 0;
@@ -371,6 +432,8 @@ async function handleJoinCreate() {
       if (currentRoom?.state === 'playing' || currentRoom?.state === 'roundEnd') {
         drawAllStrokes();
         renderChat();
+      } else if (currentRoom?.state === 'matchEnd') {
+        renderChat();
       }
     } else {
       currentRoom = null;
@@ -380,15 +443,63 @@ async function handleJoinCreate() {
   });
 }
 
+let isStartingGame = false;
+
 async function handleStartGame() {
-  if (!currentRoomId || !currentRoom) return;
-  const playerIds = Object.keys(currentRoom.players);
-  let nextDrawer = playerIds[0];
-  if (currentRoom.currentRound) {
-    const currentIndex = playerIds.indexOf(currentRoom.currentRound.drawerId);
-    nextDrawer = playerIds[(currentIndex + 1) % playerIds.length];
+  if (!currentRoomId || !currentRoom || isStartingGame) return;
+  isStartingGame = true;
+  try {
+    const playerIds = Object.keys(currentRoom.players);
+  
+  // Calculate available drawers
+  let availableDrawers = playerIds.filter(id => {
+    const turns = currentRoom!.players[id].turnsLeft;
+    return turns !== undefined ? turns > 0 : false;
+  });
+
+  if (currentRoom.state === 'lobby') {
+    const updates: any = {};
+    for (const id of playerIds) {
+      currentRoom!.players[id].turnsLeft = currentRoom!.settings.matchTurns;
+      updates[`rooms/${currentRoomId}/players/${id}/turnsLeft`] = currentRoom!.settings.matchTurns;
+    }
+    await update(ref(db), updates);
+    availableDrawers = playerIds;
+  }
+
+  if (availableDrawers.length === 0) {
+    // End of match
+    await update(ref(db, `rooms/${currentRoomId}`), {
+      state: 'matchEnd',
+      readyPlayers: null,
+      currentRound: null
+    });
+    return;
+  }
+
+  let nextDrawer = '';
+  if (currentRoom.currentRound && currentRoom.currentRound.drawerId) {
+    const prevIndex = playerIds.indexOf(currentRoom.currentRound.drawerId);
+    for (let i = 1; i <= playerIds.length; i++) {
+      const idx = (prevIndex + i) % playerIds.length;
+      if (availableDrawers.includes(playerIds[idx])) {
+        nextDrawer = playerIds[idx];
+        break;
+      }
+    }
   }
   
+  if (!nextDrawer) {
+    nextDrawer = availableDrawers[0];
+  }
+
+  const currentTurnsLeft = currentRoom.players[nextDrawer].turnsLeft;
+  const newTurnsLeft = (currentTurnsLeft !== undefined ? currentTurnsLeft : currentRoom.settings.matchTurns) - 1;
+
+  await update(ref(db, `rooms/${currentRoomId}/players/${nextDrawer}`), {
+    turnsLeft: newTurnsLeft
+  });
+
   await update(ref(db, `rooms/${currentRoomId}`), {
     state: 'playing',
     readyPlayers: [],
@@ -402,6 +513,9 @@ async function handleStartGame() {
   });
   await remove(ref(db, `rooms/${currentRoomId}/currentRound/strokes`));
   await remove(ref(db, `rooms/${currentRoomId}/currentRound/chat`));
+  } finally {
+    isStartingGame = false;
+  }
 }
 
 function updateTimer() {

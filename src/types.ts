@@ -2,6 +2,7 @@ export type Player = {
   name: string;
   score: number;
   isHost: boolean;
+  turnsLeft?: number;
 };
 
 export type Point = {
@@ -24,11 +25,12 @@ export type ChatMessage = {
   isCorrect?: boolean;
 };
 
-export type RoomState = 'lobby' | 'playing' | 'roundEnd';
+export type RoomState = 'lobby' | 'playing' | 'roundEnd' | 'matchEnd';
 
 export type RoomSettings = {
   maxStrokes: number;
   maxTime: number; // in seconds
+  matchTurns: number;
 };
 
 export type Round = {
