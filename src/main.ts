@@ -46,7 +46,9 @@ const renderLobbyRoom = (room: Room) => {
     <div class="screen lobby-container">
       <h2 class="title">Salon</h2>
       <div class="share-box">
-        <button id="btnHome" style="margin-right: auto;" title="Quitter le salon">🏠</button>
+        <button id="btnHome" title="Quitter le salon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="4" stroke-linecap="round"><path d="M6 6 L18 18 M18 6 L6 18" /></svg>
+        </button>
         <span>Code: <b>${currentRoomId}</b></span>
         <button id="btnCopyCode" class="btn-large desktop-only">📋 Code</button>
         <button id="btnCopyUrl" class="btn-large desktop-only">📋 Lien</button>
@@ -106,7 +108,9 @@ const renderGame = (room: Room) => {
   return `
     <div class="screen" style="max-width: 1000px">
       <div class="share-box" style="margin-bottom: 0.5rem">
-        <button id="btnHome" style="margin-right: auto;" title="Quitter le salon">🏠</button>
+        <button id="btnHome" title="Quitter le salon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="4" stroke-linecap="round"><path d="M6 6 L18 18 M18 6 L6 18" /></svg>
+        </button>
         <span>Code: <b>${currentRoomId}</b></span>
         <button id="btnCopyCode" class="btn-large desktop-only">📋 Code</button>
         <button id="btnCopyUrl" class="btn-large desktop-only">📋 Lien</button>

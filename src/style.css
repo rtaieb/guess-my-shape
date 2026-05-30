@@ -95,6 +95,7 @@ input[type="text"], input[type="number"] {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  position: relative;
 }
 
 .form-group {
@@ -319,8 +320,18 @@ canvas {
   padding: 0.2rem 0.5rem !important;
 }
 #btnHome {
-  font-size: 1.3rem !important;
-  padding: .1rem .5rem !important;
+  position: absolute;
+  top: -15px;
+  right: -15px;
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  padding: 0 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #e74c3c;
+  z-index: 10;
 }
 .btn-small {
   font-size: 0.9rem;
