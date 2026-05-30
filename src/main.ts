@@ -11,6 +11,7 @@ localStorage.setItem('playerId', myId);
 let myName = localStorage.getItem('playerName'); // Intentionally undefined if none
 let currentRoomId: string | null = null;
 let currentRoom: Room | null = null;
+let localReturnedToLobby = false;
 
 // URL parameters
 const urlParams = new URLSearchParams(window.location.search);
@@ -90,7 +91,6 @@ const renderLobbyRoom = (room: Room) => {
 const renderPodium = (room: Room) => {
   const sortedPlayers = Object.values(room.players).sort((a, b) => b.score - a.score);
   const medals = ['🥇', '🥈', '🥉'];
-  const isHost = room.players[myId]?.isHost;
   
   return `
     <div class="podium-overlay" id="podiumOverlay">
@@ -108,11 +108,7 @@ const renderPodium = (room: Room) => {
             </div>
           `).join('')}
         </div>
-        ${isHost ? `
-          <button id="btnNewMatch" class="btn-large" style="margin-top: 1rem; width: 100%;">Nouvelle Manche</button>
-        ` : `
-          <p style="margin-top: 1rem; text-align: center;">En attente de l'hôte pour relancer...</p>
-        `}
+        <button class="btn-large btn-return-lobby" style="margin-top: 1rem; width: 100%;">Retourner au lobby</button>
       </div>
     </div>
   `;
@@ -157,6 +153,11 @@ const renderGame = (room: Room) => {
           Partager
         </button>
       </div>
+      ${isMatchEnd ? `
+        <div style="text-align: center; margin-bottom: 1rem;">
+          <button class="btn-large btn-return-lobby">Retourner au lobby</button>
+        </div>
+      ` : ''}
       <div class="game-header">
         <div id="wordDisplay">Mot: ${wordDisplay}</div>
         <div id="timerDisplay"></div>
@@ -265,7 +266,7 @@ function updateView() {
     chatInputSelectionEnd = input.selectionEnd;
   }
 
-  if (!currentRoom) {
+  if (!currentRoomId || !currentRoom) {
     appDiv.innerHTML = renderLobbyJoin();
     document.getElementById('btnJoinCreate')!.onclick = handleJoinCreate;
     
@@ -281,7 +282,7 @@ function updateView() {
       const target = e.target as HTMLInputElement;
       target.value = target.value.toUpperCase();
     });
-  } else if (currentRoom.state === 'lobby') {
+  } else if (currentRoom.state === 'lobby' || (currentRoom.state === 'matchEnd' && localReturnedToLobby)) {
     appDiv.innerHTML = renderLobbyRoom(currentRoom);
     setupCopyButtons();
     if (currentRoom.players[myId]?.isHost) {
@@ -341,15 +342,11 @@ function updateView() {
         const overlay = document.getElementById('podiumOverlay');
         if (overlay) overlay.style.display = 'none';
       });
-      document.getElementById('btnNewMatch')?.addEventListener('click', async () => {
-        const updates: any = {};
-        updates[`rooms/${currentRoomId}/state`] = 'lobby';
-        updates[`rooms/${currentRoomId}/readyPlayers`] = null;
-        for (const [id, _] of Object.entries(currentRoom!.players)) {
-          updates[`rooms/${currentRoomId}/players/${id}/score`] = 0;
-          updates[`rooms/${currentRoomId}/players/${id}/turnsLeft`] = null;
-        }
-        await update(ref(db), updates);
+      document.querySelectorAll('.btn-return-lobby').forEach(btn => {
+        btn.addEventListener('click', () => {
+          localReturnedToLobby = true;
+          updateView();
+        });
       });
     }
 
@@ -431,6 +428,7 @@ async function handleJoinCreate() {
       }
       if (oldState !== 'playing' && currentRoom?.state === 'playing') {
         strokesCount = 0;
+        localReturnedToLobby = false;
       }
       
       // Auto-start if everyone is ready
@@ -471,11 +469,13 @@ async function handleStartGame() {
     return turns !== undefined ? turns > 0 : false;
   });
 
-  if (currentRoom.state === 'lobby') {
+  if (currentRoom.state === 'lobby' || currentRoom.state === 'matchEnd') {
     const updates: any = {};
     for (const id of playerIds) {
       currentRoom!.players[id].turnsLeft = currentRoom!.settings.matchTurns;
+      currentRoom!.players[id].score = 0;
       updates[`rooms/${currentRoomId}/players/${id}/turnsLeft`] = currentRoom!.settings.matchTurns;
+      updates[`rooms/${currentRoomId}/players/${id}/score`] = 0;
     }
     await update(ref(db), updates);
     availableDrawers = playerIds;

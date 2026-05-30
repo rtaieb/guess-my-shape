@@ -134,12 +134,24 @@ async function runTests() {
         }
         
         console.log("Podium displayed. Clicking Nouvelle Manche...");
-        await hostPage.waitForSelector('#btnNewMatch', {visible: true});
-        await hostPage.click('#btnNewMatch');
+        await hostPage.waitForSelector('.btn-return-lobby', {visible: true});
+        await hostPage.click('.btn-return-lobby');
         
-        console.log("Waiting for return to lobby...");
+        console.log("Waiting for host to return to lobby...");
+        await hostPage.waitForSelector('.lobby-container', {visible: true});
+        
+        console.log("Verifying other players are still on podium...");
+        for(let i=1; i<4; i++) {
+          await pages[i].waitForSelector('.podium-overlay', {visible: true, timeout: 2000});
+        }
+        
+        console.log("Host is restarting the game...");
+        await hostPage.waitForSelector('#btnStartGame', {visible: true});
+        await hostPage.click('#btnStartGame');
+        
+        console.log("Waiting for game to restart for everyone...");
         for(let page of pages) {
-          await page.waitForSelector('.lobby-container', {visible: true});
+          await page.waitForSelector('#wordDisplay', {visible: true, timeout: 5000});
         }
       }
     }
