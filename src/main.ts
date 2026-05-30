@@ -46,7 +46,7 @@ const renderLobbyRoom = (room: Room) => {
     <div class="screen lobby-container">
       <h2 class="title">Salon</h2>
       <div class="share-box">
-        <button id="btnHome" class="btn-icon" title="Quitter le salon">🏠</button>
+        <button id="btnHome" style="margin-right: auto;" title="Quitter le salon">🏠</button>
         <span>Code: <b>${currentRoomId}</b></span>
         <button id="btnCopyCode" class="btn-large">📋 Code</button>
         <button id="btnCopyUrl" class="btn-large">📋 Lien</button>
@@ -102,14 +102,14 @@ const renderGame = (room: Room) => {
   return `
     <div class="screen" style="max-width: 1000px">
       <div class="share-box" style="margin-bottom: 0.5rem">
-        <button id="btnHome" class="btn-icon" title="Quitter le salon">🏠</button>
+        <button id="btnHome" style="margin-right: auto;" title="Quitter le salon">🏠</button>
         <span>Code: <b>${currentRoomId}</b></span>
         <button id="btnCopyCode" class="btn-large">📋 Code</button>
         <button id="btnCopyUrl" class="btn-large">📋 Lien</button>
       </div>
       <div class="game-header">
         <div id="wordDisplay">Mot: ${wordDisplay}</div>
-        <div id="timerDisplay">--:--</div>
+        <div id="timerDisplay"></div>
         <div id="strokesDisplay">Traits: 0 / ${room.settings.maxStrokes}</div>
       </div>
       <div class="game-container">
@@ -347,7 +347,13 @@ function updateTimer() {
   const remaining = Math.max(0, currentRoom.settings.maxTime - elapsed);
   
   const timerDisplay = document.getElementById('timerDisplay');
-  if (timerDisplay) timerDisplay.innerText = `Temps: ${remaining}s`;
+  if (timerDisplay) {
+    if (remaining > 0) {
+      timerDisplay.innerText = `Temps: ${remaining}s`;
+    } else {
+      timerDisplay.innerText = '';
+    }
+  }
   
   if (remaining === 0 && currentRoom.players[myId]?.isHost) {
     // End round logic, set end time for 10s delay
