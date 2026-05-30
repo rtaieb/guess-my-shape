@@ -1,0 +1,8 @@
+version: '3.8'
+services:
+  firebase-emulator:
+    build:
+      context: .
+      dockerfile: Dockerfile.firebase
+    ports:
+      - "19000:19000"
