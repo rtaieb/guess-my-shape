@@ -321,8 +321,8 @@ canvas {
 }
 #btnHome {
   position: absolute;
-  top: -15px;
-  right: -15px;
+  top: -50px;
+  right: -50px;
   width: 45px;
   height: 45px;
   border-radius: 50%;
