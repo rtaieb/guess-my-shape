@@ -93,8 +93,11 @@ const renderPodium = (room: Room) => {
   const isHost = room.players[myId]?.isHost;
   
   return `
-    <div class="podium-overlay">
-      <div class="podium-modal">
+    <div class="podium-overlay" id="podiumOverlay">
+      <div class="podium-modal" style="position: relative;">
+        <button id="btnClosePodium" title="Fermer" style="position: absolute; top: -30px; right: -30px; width: 45px; height: 45px; border-radius: 50%; padding: 0; display: flex; align-items: center; justify-content: center; background-color: #e74c3c; border: 4px solid #333; cursor: pointer; z-index: 10; box-shadow: 4px 4px 0px #000;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="4" stroke-linecap="round"><path d="M6 6 L18 18 M18 6 L6 18" /></svg>
+        </button>
         <h2>Fin de la Manche !</h2>
         <div class="podium-list">
           ${sortedPlayers.slice(0, 3).map((p, i) => `
@@ -130,8 +133,8 @@ const renderGame = (room: Room) => {
   }).join('');
   
   const amIDrawer = !isMatchEnd && room.currentRound && room.currentRound.drawerId === myId;
-  const wordDisplay = isMatchEnd || !room.currentRound ? '---' : 
-    (amIDrawer || room.state === 'roundEnd' 
+  const wordDisplay = !room.currentRound ? '---' : 
+    (amIDrawer || room.state === 'roundEnd' || isMatchEnd
       ? room.currentRound.word 
       : room.currentRound.word.replace(/[a-zA-ZÀ-ÿ]/g, '_ '));
 
@@ -140,7 +143,7 @@ const renderGame = (room: Room) => {
   const isReady = room.readyPlayers?.includes(myId);
 
   return `
-    <div class="screen" style="max-width: 1000px">
+    <div class="screen" style="max-width: 1000px; position: relative;">
       ${isMatchEnd ? renderPodium(room) : ''}
       <div class="share-box" style="margin-bottom: 0.5rem">
         <button id="btnHome" title="Quitter le salon">
@@ -282,7 +285,14 @@ function updateView() {
     appDiv.innerHTML = renderLobbyRoom(currentRoom);
     setupCopyButtons();
     if (currentRoom.players[myId]?.isHost) {
-      document.getElementById('btnStartGame')!.onclick = handleStartGame;
+      document.getElementById('btnStartGame')!.onclick = () => {
+        const val = parseInt((document.getElementById('settingMatchTurns') as HTMLInputElement)?.value);
+        if (val && currentRoom) {
+          if (!currentRoom.settings) currentRoom.settings = {} as any;
+          currentRoom.settings.matchTurns = val;
+        }
+        handleStartGame();
+      };
       
       document.getElementById('btnDiffFacile')?.addEventListener('click', () => {
         update(ref(db, `rooms/${currentRoomId}/settings`), { maxStrokes: 20, maxTime: 60 });
@@ -327,6 +337,10 @@ function updateView() {
         }
       });
     } else if (currentRoom.state === 'matchEnd') {
+      document.getElementById('btnClosePodium')?.addEventListener('click', () => {
+        const overlay = document.getElementById('podiumOverlay');
+        if (overlay) overlay.style.display = 'none';
+      });
       document.getElementById('btnNewMatch')?.addEventListener('click', async () => {
         const updates: any = {};
         updates[`rooms/${currentRoomId}/state`] = 'lobby';
@@ -471,8 +485,7 @@ async function handleStartGame() {
     // End of match
     await update(ref(db, `rooms/${currentRoomId}`), {
       state: 'matchEnd',
-      readyPlayers: null,
-      currentRound: null
+      readyPlayers: null
     });
     return;
   }
@@ -494,7 +507,8 @@ async function handleStartGame() {
   }
 
   const currentTurnsLeft = currentRoom.players[nextDrawer].turnsLeft;
-  const newTurnsLeft = (currentTurnsLeft !== undefined ? currentTurnsLeft : currentRoom.settings.matchTurns) - 1;
+  const matchTurns = currentRoom.settings?.matchTurns || 3;
+  const newTurnsLeft = (currentTurnsLeft !== undefined ? currentTurnsLeft : matchTurns) - 1;
 
   await update(ref(db, `rooms/${currentRoomId}/players/${nextDrawer}`), {
     turnsLeft: newTurnsLeft
@@ -533,11 +547,19 @@ function updateTimer() {
   }
   
   if (remaining === 0 && currentRoom.players[myId]?.isHost) {
-    // End round logic, set end time for 10s delay
-    update(ref(db, `rooms/${currentRoomId}`), { 
-      state: 'roundEnd',
-      roundEndTime: Date.now() + 10000 
-    });
+    // End round logic
+    const isMatchEnd = Object.values(currentRoom.players).every(p => !p.turnsLeft || p.turnsLeft <= 0);
+    if (isMatchEnd) {
+      update(ref(db, `rooms/${currentRoomId}`), { 
+        state: 'matchEnd',
+        readyPlayers: null 
+      });
+    } else {
+      update(ref(db, `rooms/${currentRoomId}`), { 
+        state: 'roundEnd',
+        roundEndTime: Date.now() + 10000 
+      });
+    }
   }
 }
 
@@ -707,8 +729,14 @@ async function handleGuess(text: string) {
     // Check round end
     const totalPlayers = Object.keys(currentRoom.players).length;
     if (newCorrect.length >= 3 || newCorrect.length >= totalPlayers - 1) {
-      updates[`rooms/${currentRoomId}/state`] = 'roundEnd';
-      updates[`rooms/${currentRoomId}/roundEndTime`] = Date.now() + 10000;
+      const isMatchEnd = Object.values(currentRoom.players).every(p => !p.turnsLeft || p.turnsLeft <= 0);
+      if (isMatchEnd) {
+        updates[`rooms/${currentRoomId}/state`] = 'matchEnd';
+        updates[`rooms/${currentRoomId}/readyPlayers`] = null;
+      } else {
+        updates[`rooms/${currentRoomId}/state`] = 'roundEnd';
+        updates[`rooms/${currentRoomId}/roundEndTime`] = Date.now() + 10000;
+      }
     }
     
     await update(ref(db), updates);

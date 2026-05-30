@@ -351,3 +351,59 @@ canvas {
   background-color: #34495e !important;
   border-color: #2c3e50 !important;
 }
+
+/* PODIUM OVERLAY */
+.podium-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  border-radius: 8px;
+}
+
+.podium-modal {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  padding: 2rem;
+  border-radius: 12px;
+  border: 4px solid #333;
+  box-shadow: 8px 8px 0px #000;
+  width: 90%;
+  max-width: 400px;
+  text-align: center;
+}
+
+.podium-modal h2 {
+  font-size: 2.5rem;
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+}
+
+.podium-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.podium-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 2px solid #333;
+  font-size: 1.5rem;
+  background: #f9f9f9;
+}
+
+.podium-item.rank-1 { background: #ffd700; font-weight: bold; transform: scale(1.05); }
+.podium-item.rank-2 { background: #e0e0e0; }
+.podium-item.rank-3 { background: #cd7f32; color: white; }
+
+.podium-item .medal { font-size: 2rem; }
+.podium-item .name { flex-grow: 1; text-align: left; padding-left: 1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

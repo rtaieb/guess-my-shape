@@ -111,20 +111,20 @@ async function runTests() {
         }
       }
 
-      // Wait for roundEnd UI (btnNextRound) on all pages
-      console.log("Waiting for next round button...");
-      for(let page of pages) {
-        await page.waitForSelector('#btnNextRound', {visible: true});
-      }
-      
-      console.log("Round ended! Testing readiness click...");
-      // Click btnNextRound
-      for(let page of pages) {
-        await page.click('#btnNextRound');
-        await new Promise(r => setTimeout(r, 500));
-      }
-
       if (round < 4) {
+        // Wait for roundEnd UI (btnNextRound) on all pages
+        console.log("Waiting for next round button...");
+        for(let page of pages) {
+          await page.waitForSelector('#btnNextRound', {visible: true});
+        }
+        
+        console.log("Round ended! Testing readiness click...");
+        // Click btnNextRound
+        for(let page of pages) {
+          await page.click('#btnNextRound');
+          await new Promise(r => setTimeout(r, 500));
+        }
+
         console.log("All players ready. Waiting for new round to start...");
         await hostPage.waitForFunction(() => !document.getElementById('btnNextRound'), {timeout: 5000});
       } else {
