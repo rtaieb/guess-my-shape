@@ -521,6 +521,7 @@ async function handleJoinCreate() {
         drawAllStrokes();
         renderChat();
       } else if (currentRoom?.state === 'matchEnd') {
+        drawAllStrokes();
         renderChat();
       }
     } else {

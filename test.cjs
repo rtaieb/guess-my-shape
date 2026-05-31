@@ -10,7 +10,7 @@ async function runTests() {
   });
 
   const pages = [];
-  const roomCode = 'TEST_' + Date.now();
+  const roomCode = 'T' + Math.random().toString(36).substring(2, 8).toUpperCase();
 
   try {
     for (let i = 1; i <= 4; i++) {
@@ -20,7 +20,7 @@ async function runTests() {
       pages.push(page);
       
       // Navigate
-      await page.goto('http://localhost:5173', { waitUntil: 'networkidle0' });
+      await page.goto('http://localhost:5173/guess-my-shape/', { waitUntil: 'networkidle0' });
       
       // Join
       await page.type('#playerNameInput', `Player${i}`);
@@ -36,7 +36,8 @@ async function runTests() {
     const hostPage = pages[0];
     
     // Set matchTurns to 1
-    await hostPage.waitForSelector('#settingMatchTurns');
+    await hostPage.waitForFunction(() => document.getElementById('settingMatchTurns') !== null, {timeout: 30000});
+    await new Promise(r => setTimeout(r, 1000));
     await hostPage.evaluate(() => {
       document.getElementById('settingMatchTurns').value = '1';
       document.getElementById('settingMatchTurns').dispatchEvent(new Event('change'));
@@ -133,6 +134,18 @@ async function runTests() {
           await page.waitForSelector('.podium-overlay', {visible: true, timeout: 5000});
         }
         
+        console.log("Closing podium on player 2 to check canvas...");
+        await pages[1].click('#btnClosePodium');
+        await pages[1].waitForFunction(() => {
+          const el = document.getElementById('podiumOverlay');
+          return el && el.style.display === 'none';
+        });
+        const strokesText = await pages[1].evaluate(() => document.getElementById('strokesDisplay').innerText);
+        if (strokesText.includes('Traits: 0 /')) {
+          throw new Error("BUG: Canvas was reset, strokes are 0!");
+        }
+        console.log("Canvas is preserved: " + strokesText);
+        
         console.log("Podium displayed. Clicking Nouvelle Manche...");
         await hostPage.waitForSelector('.btn-return-lobby', {visible: true});
         await hostPage.click('.btn-return-lobby');
@@ -141,7 +154,7 @@ async function runTests() {
         await hostPage.waitForSelector('.lobby-container', {visible: true});
         
         console.log("Verifying other players are still on podium...");
-        for(let i=1; i<4; i++) {
+        for(let i=2; i<4; i++) {
           await pages[i].waitForSelector('.podium-overlay', {visible: true, timeout: 2000});
         }
         
@@ -162,7 +175,10 @@ async function runTests() {
     console.error("TEST FAILED:", error);
     try {
       if (pages.length > 0) {
-        await pages[0].screenshot({path: 'C:\\Users\\rapha\\.gemini\\antigravity\\brain\\f3a30b1d-e52d-4ed7-babf-f9ae4fd5d04b\\test_failure.png'});
+        const content = await pages[0].content();
+        console.log("HTML Content of hostPage:");
+        console.log(content);
+        await pages[0].screenshot({path: 'test_failure.png'});
         console.log("Screenshot saved to test_failure.png");
       }
     } catch(e) {}
