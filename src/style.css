@@ -408,6 +408,20 @@ canvas {
 .podium-item .medal { font-size: 2rem; }
 .podium-item .name { flex-grow: 1; text-align: left; padding-left: 1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+@media (max-width: 768px) {
+  .podium-modal {
+    width: 95%;
+    padding: 1.5rem 1rem;
+  }
+  .podium-item {
+    font-size: 1.1rem;
+    padding: 0.5rem;
+  }
+  .podium-item .score {
+    display: none;
+  }
+}
+
 /* STATS OVERLAY */
 .stats-overlay {
   position: fixed;
