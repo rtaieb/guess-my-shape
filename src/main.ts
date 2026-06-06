@@ -387,13 +387,19 @@ function updateView() {
           await set(ref(db, `rooms/${currentRoomId}/readyPlayers`), newReady);
         }
       });
-      
-      document.getElementById('btnSaveDrawing')?.addEventListener('click', async () => {
-        const container = document.getElementById('exportContainer');
-        const exportTitle = document.getElementById('exportTitle');
-        if (!container) return;
-        
-        const elementsToHide = container.querySelectorAll('.share-box, .btn-return-lobby, .players-list, .ready-panel, #btnSaveDrawing, .podium-overlay') as NodeListOf<HTMLElement>;
+      const saveBtn = document.getElementById('btnSaveDrawing');
+      if (saveBtn) {
+        const renderTime = Date.now();
+        saveBtn.addEventListener('click', async (e) => {
+          if (Date.now() - renderTime < 500) {
+            e.preventDefault();
+            return;
+          }
+          const container = document.getElementById('exportContainer');
+          const exportTitle = document.getElementById('exportTitle');
+          if (!container) return;
+          
+          const elementsToHide = container.querySelectorAll('.share-box, .btn-return-lobby, .players-list, .ready-panel, #btnSaveDrawing, .podium-overlay') as NodeListOf<HTMLElement>;
         const oldDisplays: string[] = [];
         elementsToHide.forEach((el) => {
           oldDisplays.push(el.style.display);
@@ -424,6 +430,7 @@ function updateView() {
           container.style.padding = oldPadding;
         }
       });
+      }
     } else if (currentRoom.state === 'matchEnd') {
       document.getElementById('btnClosePodium')?.addEventListener('click', () => {
         const overlay = document.getElementById('podiumOverlay');
