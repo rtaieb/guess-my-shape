@@ -13,6 +13,7 @@ let myName = localStorage.getItem('playerName'); // Intentionally undefined if n
 let currentRoomId: string | null = null;
 let currentRoom: Room | null = null;
 let localReturnedToLobby = false;
+let localCorrectGuessers: string[] = [];
 
 
 
@@ -357,6 +358,23 @@ function updateView() {
     setupCanvas();
     setupChat();
     
+    if (currentRoom.state === 'playing' && currentRoom.currentRound) {
+      const newGuessers = currentRoom.currentRound.correctGuessers || [];
+      if (newGuessers.length > localCorrectGuessers.length) {
+        const added = newGuessers.filter(id => !localCorrectGuessers.includes(id));
+        added.forEach(id => {
+          if (id === myId) {
+            showToast("Vous avez trouvé le mot !");
+          } else {
+            showToast(`${currentRoom!.players[id].name} a trouvé le mot !`);
+          }
+        });
+      }
+      localCorrectGuessers = newGuessers;
+    } else if (currentRoom.state !== 'playing') {
+      localCorrectGuessers = [];
+    }
+
     if (currentRoom.state === 'roundEnd') {
       document.getElementById('btnNextRound')?.addEventListener('click', async () => {
         const readyPlayers = currentRoom!.readyPlayers || [];
@@ -844,7 +862,10 @@ function setupChat() {
       handleGuess(text);
     }
   };
-  btn.onclick = send;
+  btn.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    send();
+  });
   input.onkeypress = (e) => { if (e.key === 'Enter') send(); };
 }
 

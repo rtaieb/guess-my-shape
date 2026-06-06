@@ -234,6 +234,17 @@ canvas {
     padding: 1rem;
     width: auto;
   }
+  #btnHome {
+    top: -10px;
+    right: -10px;
+    width: 35px;
+    height: 35px;
+    font-size: 0.9rem;
+  }
+  .toast {
+    top: 20px;
+    bottom: auto;
+  }
   .game-container {
     grid-template-columns: 1fr;
   }
