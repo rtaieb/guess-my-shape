@@ -243,7 +243,9 @@ canvas {
   }
   .toast {
     top: 20px;
-    bottom: auto;
+    bottom: unset;
+    height: fit-content;
+    max-height: 50px;
   }
   .game-container {
     grid-template-columns: 1fr;
