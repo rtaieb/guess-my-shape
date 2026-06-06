@@ -229,6 +229,11 @@ canvas {
 }
 
 @media (max-width: 768px) {
+  #app {
+    margin: 1rem;
+    padding: 1rem;
+    width: auto;
+  }
   .game-container {
     grid-template-columns: 1fr;
   }
@@ -408,7 +413,7 @@ canvas {
 @media (max-width: 768px) {
   .podium-modal {
     width: 95%;
-    padding: 1.5rem 1rem;
+    padding: 1rem 0.5rem;
   }
   .podium-item {
     font-size: 1.1rem;
