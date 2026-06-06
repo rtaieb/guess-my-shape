@@ -7,6 +7,22 @@
     <title>Guess My Shape</title>
     <!-- Kalam font for handwriting -->
     <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&display=swap" rel="stylesheet">
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-FBQ85X6VX9"></script>
+    <script>
+      if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'G-FBQ85X6VX9', {
+          'client_storage': 'none',
+          'anonymize_ip': true
+        });
+      } else {
+        console.log('Google Analytics désactivé en environnement de développement local.');
+      }
+    </script>
   </head>
   <body>
     <div id="app">
