@@ -306,6 +306,7 @@ canvas {
   transition: opacity 0.3s;
   pointer-events: none;
   font-weight: bold;
+  z-index: 9999;
 }
 .toast.show { opacity: 1; }
 

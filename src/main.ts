@@ -237,7 +237,9 @@ function showToast(msg: string) {
   }
   toast.innerText = msg;
   toast.classList.add('show');
-  setTimeout(() => toast!.classList.remove('show'), 2500);
+  
+  if ((toast as any).timeoutId) clearTimeout((toast as any).timeoutId);
+  (toast as any).timeoutId = setTimeout(() => toast!.classList.remove('show'), 2500);
 }
 
 function setupCopyButtons() {
@@ -358,7 +360,7 @@ function updateView() {
     setupCanvas();
     setupChat();
     
-    if (currentRoom.state === 'playing' && currentRoom.currentRound) {
+    if (currentRoom.currentRound) {
       const newGuessers = currentRoom.currentRound.correctGuessers || [];
       if (newGuessers.length > localCorrectGuessers.length) {
         const added = newGuessers.filter(id => !localCorrectGuessers.includes(id));
@@ -369,9 +371,11 @@ function updateView() {
             showToast(`${currentRoom!.players[id].name} a trouvé le mot !`);
           }
         });
+        localCorrectGuessers = newGuessers;
+      } else if (newGuessers.length < localCorrectGuessers.length) {
+        localCorrectGuessers = newGuessers;
       }
-      localCorrectGuessers = newGuessers;
-    } else if (currentRoom.state !== 'playing') {
+    } else {
       localCorrectGuessers = [];
     }
 
