@@ -25,7 +25,7 @@ export type ChatMessage = {
   isCorrect?: boolean;
 };
 
-export type RoomState = 'lobby' | 'playing' | 'roundEnd' | 'matchEnd';
+export type RoomState = 'lobby' | 'choosing' | 'playing' | 'roundEnd' | 'matchEnd';
 
 export type RoomSettings = {
   maxStrokes: number;
@@ -36,6 +36,8 @@ export type RoomSettings = {
 export type Round = {
   drawerId: string;
   word: string;
+  wordChoices?: string[];
+  choosingEndTime?: number;
   startTime: number;
   correctGuessers: string[];
   strokes?: Record<string, Stroke>;

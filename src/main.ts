@@ -136,7 +136,7 @@ const renderGame = (room: Room) => {
   }).join('');
   
   const amIDrawer = !isMatchEnd && room.currentRound && room.currentRound.drawerId === myId;
-  const wordDisplay = !room.currentRound ? '---' : 
+  const wordDisplay = !room.currentRound || room.state === 'choosing' ? '---' : 
     (amIDrawer || room.state === 'roundEnd' || isMatchEnd
       ? room.currentRound.word 
       : room.currentRound.word.replace(/[a-zA-ZÀ-ÿ]/g, '_ '));
@@ -173,6 +173,21 @@ const renderGame = (room: Room) => {
       </div>
       <div class="game-container">
         <div style="position: relative;">
+          ${room.state === 'choosing' ? `
+            <div class="choosing-overlay" style="position: absolute; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; border-radius: 8px;">
+              ${amIDrawer ? `
+                <h2>Choisis ton mot</h2>
+                <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                  ${room.currentRound?.wordChoices?.map(w => `
+                    <button class="btn-large btn-choose-word" data-word="${w}">${w}</button>
+                  `).join('')}
+                </div>
+              ` : `
+                <h2>${room.players[room.currentRound!.drawerId].name} choisit son mot...</h2>
+              `}
+              <div id="choosingTimerDisplay" style="margin-top: 1rem; font-size: 2rem; font-weight: bold;"></div>
+            </div>
+          ` : ''}
           ${room.state === 'roundEnd' ? `
             <button id="btnSaveDrawing" title="Sauvegarder l'image" style="position: absolute; top: 10px; right: 10px; font-size: 1.5rem; background-color: #e74c3c; border: 2px solid #c0392b; border-bottom-width: 4px; border-radius: 5px; cursor: pointer; padding: 5px; z-index: 10; color: white;">
               💾
@@ -398,6 +413,16 @@ function updateView() {
           updateView();
         });
       });
+    } else if (currentRoom.state === 'choosing' && currentRoom.currentRound?.drawerId === myId) {
+      document.querySelectorAll('.btn-choose-word').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const w = (e.target as HTMLElement).getAttribute('data-word');
+          if (w && !(window as any).isChoosingWord) {
+            (window as any).isChoosingWord = true;
+            handleChooseWord(w);
+          }
+        });
+      });
     }
 
     // Timers
@@ -408,6 +433,9 @@ function updateView() {
     } else if (currentRoom.state === 'roundEnd') {
       (window as any).timerInt = setInterval(updateReadyTimer, 1000);
       updateReadyTimer();
+    } else if (currentRoom.state === 'choosing') {
+      (window as any).timerInt = setInterval(updateChoosingTimer, 1000);
+      updateChoosingTimer();
     }
   }
 
@@ -591,14 +619,20 @@ async function handleStartGame() {
     turnsLeft: newTurnsLeft
   });
 
+  let w1 = getRandomWord();
+  let w2 = getRandomWord();
+  while (w2 === w1) w2 = getRandomWord();
+
   await update(ref(db, `rooms/${currentRoomId}`), {
-    state: 'playing',
+    state: 'choosing',
     readyPlayers: [],
     roundEndTime: null,
     currentRound: {
       drawerId: nextDrawer,
-      word: getRandomWord(),
-      startTime: Date.now(),
+      word: '',
+      wordChoices: [w1, w2],
+      choosingEndTime: Date.now() + 7000,
+      startTime: 0,
       correctGuessers: []
     }
   });
@@ -606,6 +640,41 @@ async function handleStartGame() {
   await remove(ref(db, `rooms/${currentRoomId}/currentRound/chat`));
   } finally {
     isStartingGame = false;
+  }
+}
+
+async function handleChooseWord(word: string) {
+  if (!currentRoom || currentRoom.state !== 'choosing' || currentRoom.currentRound?.drawerId !== myId) return;
+  await update(ref(db, `rooms/${currentRoomId}`), {
+    state: 'playing',
+    'currentRound/word': word,
+    'currentRound/startTime': Date.now(),
+    'currentRound/wordChoices': null,
+    'currentRound/choosingEndTime': null
+  });
+  (window as any).isChoosingWord = false;
+}
+
+function updateChoosingTimer() {
+  if (!currentRoom || currentRoom.state !== 'choosing' || !currentRoom.currentRound?.choosingEndTime) return;
+  const remaining = Math.max(0, Math.ceil((currentRoom.currentRound.choosingEndTime - Date.now()) / 1000));
+  
+  const timerDisplay = document.getElementById('choosingTimerDisplay');
+  if (timerDisplay) {
+    if (remaining > 0) {
+      timerDisplay.innerText = `${remaining}s`;
+    } else {
+      timerDisplay.innerText = '';
+    }
+  }
+  
+  if (remaining <= 0 && currentRoom.currentRound.drawerId === myId) {
+    if (!(window as any).isChoosingWord) {
+      (window as any).isChoosingWord = true;
+      const choices = currentRoom.currentRound.wordChoices || ['Erreur', 'Erreur'];
+      const chosenWord = choices[Math.floor(Math.random() * choices.length)];
+      handleChooseWord(chosenWord);
+    }
   }
 }
 

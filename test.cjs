@@ -75,6 +75,18 @@ async function runTests() {
       console.log(`Drawer is Player ${drawerIndex + 1}`);
 
       const drawerPage = pages[drawerIndex];
+      
+      // Wait for choosing modal and pick a word
+      console.log("Choosing a word...");
+      await drawerPage.waitForSelector('.btn-choose-word', {visible: true});
+      await drawerPage.click('.btn-choose-word');
+      
+      // Wait for word to be displayed
+      await drawerPage.waitForFunction(() => {
+        const text = document.getElementById('wordDisplay').innerText;
+        return text && !text.includes('---');
+      });
+
       // Draw a straight line
       console.log("Drawing a line...");
       await drawerPage.mouse.move(100, 100);
