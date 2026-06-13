@@ -15,6 +15,14 @@ let currentRoom: Room | null = null;
 let localReturnedToLobby = false;
 let localCorrectGuessers: string[] = [];
 
+let serverTimeOffset = 0;
+onValue(ref(db, '.info/serverTimeOffset'), (snap) => {
+  serverTimeOffset = snap.val() || 0;
+});
+function getServerTime() {
+  return Date.now() + serverTimeOffset;
+}
+
 
 
 // URL parameters
@@ -660,7 +668,7 @@ async function handleStartGame() {
       drawerId: nextDrawer,
       word: '',
       wordChoices: [w1, w2],
-      choosingEndTime: Date.now() + 7000,
+      choosingEndTime: getServerTime() + 7000,
       startTime: 0,
       correctGuessers: []
     }
@@ -677,7 +685,7 @@ async function handleChooseWord(word: string) {
   await update(ref(db, `rooms/${currentRoomId}`), {
     state: 'playing',
     'currentRound/word': word,
-    'currentRound/startTime': Date.now(),
+    'currentRound/startTime': getServerTime(),
     'currentRound/wordChoices': null,
     'currentRound/choosingEndTime': null
   });
@@ -686,7 +694,7 @@ async function handleChooseWord(word: string) {
 
 function updateChoosingTimer() {
   if (!currentRoom || currentRoom.state !== 'choosing' || !currentRoom.currentRound?.choosingEndTime) return;
-  const remaining = Math.max(0, Math.ceil((currentRoom.currentRound.choosingEndTime - Date.now()) / 1000));
+  const remaining = Math.max(0, Math.ceil((currentRoom.currentRound.choosingEndTime - getServerTime()) / 1000));
   
   const timerDisplay = document.getElementById('choosingTimerDisplay');
   if (timerDisplay) {
@@ -709,7 +717,7 @@ function updateChoosingTimer() {
 
 function updateTimer() {
   if (!currentRoom || currentRoom.state !== 'playing' || !currentRoom.currentRound) return;
-  const elapsed = Math.floor((Date.now() - currentRoom.currentRound.startTime) / 1000);
+  const elapsed = Math.floor((getServerTime() - currentRoom.currentRound.startTime) / 1000);
   const remaining = Math.max(0, currentRoom.settings.maxTime - elapsed);
   
   const timerDisplay = document.getElementById('timerDisplay');
@@ -732,7 +740,7 @@ function updateTimer() {
     } else {
       update(ref(db, `rooms/${currentRoomId}`), { 
         state: 'roundEnd',
-        roundEndTime: Date.now() + 10000 
+        roundEndTime: getServerTime() + 10000 
       });
     }
   }
@@ -747,7 +755,7 @@ function updateReadyTimer() {
     return;
   }
   
-  const remaining = Math.max(0, Math.ceil((currentRoom.roundEndTime - Date.now()) / 1000));
+  const remaining = Math.max(0, Math.ceil((currentRoom.roundEndTime - getServerTime()) / 1000));
   if (timerDisplay) timerDisplay.innerText = `Départ automatique dans ${remaining}s...`;
   
   if (remaining === 0 && currentRoom.players[myId]?.isHost) {
@@ -913,7 +921,7 @@ async function handleGuess(text: string) {
         updates[`rooms/${currentRoomId}/readyPlayers`] = null;
       } else {
         updates[`rooms/${currentRoomId}/state`] = 'roundEnd';
-        updates[`rooms/${currentRoomId}/roundEndTime`] = Date.now() + 10000;
+        updates[`rooms/${currentRoomId}/roundEndTime`] = getServerTime() + 10000;
       }
     }
     
@@ -921,12 +929,12 @@ async function handleGuess(text: string) {
     
     // Send system chat
     await push(ref(db, `rooms/${currentRoomId}/currentRound/chat`), {
-      authorId: 'system', authorName: 'System', text: `${myName} a trouvé le mot !`, timestamp: Date.now(), isSystem: true, isCorrect: true
+      authorId: 'system', authorName: 'System', text: `${myName} a trouvé le mot !`, timestamp: getServerTime(), isSystem: true, isCorrect: true
     });
   } else {
     // Normal chat message
     await push(ref(db, `rooms/${currentRoomId}/currentRound/chat`), {
-      authorId: myId, authorName: myName, text, timestamp: Date.now()
+      authorId: myId, authorName: myName, text, timestamp: getServerTime()
     });
   }
 }
@@ -935,12 +943,28 @@ function renderChat() {
   const container = document.getElementById('chatMessages');
   if (!container || !currentRoom?.currentRound?.chat) return;
   
-  const messages = Object.values(currentRoom.currentRound.chat).sort((a, b) => a.timestamp - b.timestamp);
+  const isMobile = window.innerWidth <= 768;
+  
+  const messages = Object.entries(currentRoom.currentRound.chat)
+    .map(([key, m]) => ({ id: key, ...(m as any) }))
+    .sort((a, b) => {
+      if (isMobile) {
+        return a.id < b.id ? 1 : a.id > b.id ? -1 : 0;
+      } else {
+        return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+      }
+    });
+    
   container.innerHTML = messages.map(m => {
     if (m.isSystem) return `<div class="message system ${m.isCorrect ? 'correct' : ''}">${m.text}</div>`;
     return `<div class="message"><span class="author">${m.authorName}:</span>${m.text}</div>`;
   }).join('');
-  container.scrollTop = container.scrollHeight;
+  
+  if (isMobile) {
+    container.scrollTop = 0;
+  } else {
+    container.scrollTop = container.scrollHeight;
+  }
 }
 
 updateView();
@@ -958,5 +982,14 @@ get(ref(db, 'rooms')).then(snap => {
     if (Object.keys(updates).length > 0) {
       update(ref(db), updates);
     }
+  }
+});
+
+let lastIsMobile = window.innerWidth <= 768;
+window.addEventListener('resize', () => {
+  const isMobile = window.innerWidth <= 768;
+  if (isMobile !== lastIsMobile) {
+    lastIsMobile = isMobile;
+    renderChat();
   }
 });
